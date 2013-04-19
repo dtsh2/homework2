@@ -1,5 +1,92 @@
+# THIS IS STEALING JULIE's CODE TO SEE IF IT WORKS
+# homework.R
+# Created: 16 April 2013 by JRCP
+#
 
-setwd("C:/Users/David Hayman/Documents/GitHub/Homework/lab")
 
-data1<-read.file(testbin.o)
-data2<-read.file(testHeads.o)
+# INSTRUCTIONS
+# 1. read a file that has two rows: column names, column data types
+#
+# 2. based on the input from that file, read another binary file that has those columns with those data types
+#
+# ADDITIONAL INFO
+# - The first file will be ascii text (strictly speaking, the english letter/number character subset of utf-8),
+# no specific mimetype (aka, extension). single space between columns, newline between rows 
+# - The second file will be binary data, no specific mimetype.
+
+
+# NOTE that the package stringr is used if any of the data are character strings. To install the package, run
+# the following line:
+# install.packages(stringr)
+
+
+read.fun <- function(fn1,fn2){
+  # fn1 is the filename for the first file, which has two rows (column names, column data types)
+  # Read in the first file:
+  
+  info <- read.table(fn1,sep=" ",as.is=T,encoding="UTF-8")
+  cnames <- as.character(info[1,])
+  ctypes <- as.character(info[2,])
+  
+  dat <- NULL
+  
+  # Open file 2 for reading
+  cc <- file(fn2,"rb")  
+  
+  # browser()
+  repeat{
+    temp <- sapply(1:length(cnames),function(ii){
+      
+      if(grepl("char",ctypes[ii])){
+        if(ctypes[ii]=="character"){
+          leido <- readChar(cc,1)
+        }else{
+          len <- as.numeric(strsplit(ctypes[ii],"character")[[1]][2])
+          leido <- readChar(cc,len)
+          require(stringr)
+          leido <- str_trim(leido)
+        }
+      }else{
+        options <- c("numeric", "double", "int", "logical", "complex", "raw")
+        if(any(c(options,"integer")==ctypes[ii])){
+          leido <- readBin(cc,what=ctypes[ii]) 
+        }else{
+          if(grepl("integer",ctypes[ii])){
+            len <- as.numeric(strsplit(ctypes[ii],"integer")[[1]][2])
+            thing <- replicate(len,readBin(cc,what="integer"))
+            leido <- paste(thing,collapse=" ")
+          }else{
+            mode.tf <- sapply(options,function(mm){grepl(mm,ctypes[ii])})
+            use.mode <- options[mode.tf]
+            if(sum(mode.tf)!=1){
+              warning("Unknown data type (mode) specified in first file.")
+            }
+            len <- as.numeric(strsplit(ctypes[ii],use.mode)[[1]][2])
+            thing <- replicate(len,readBin(cc,what=use.mode))
+            leido <- paste(thing,collapse=" ")
+          }
+        }
+      }
+      return(leido)
+    })
+    
+    if(all(is.character(temp))){
+      dat <- rbind(dat,temp)
+    }else{
+      # Close file 2
+      close(cc)
+      
+      dat <- suppressWarnings(data.frame(dat))
+      names(dat) <- cnames
+      
+      break      
+    }
+  }
+  
+  # browser()
+  return(dat) 
+}
+
+
+test1 <- read.fun("testHeads.o","testbin.o")
+# test2 <- read.fun("testHeadsJP.o","testbin.o")
