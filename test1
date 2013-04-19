@@ -1,0 +1,5 @@
+
+setwd("C:/Users/David Hayman/Documents/GitHub/Homework/lab")
+
+data1<-read.file(testbin.o)
+data2<-read.file(testHeads.o)
